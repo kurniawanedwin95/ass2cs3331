@@ -4,7 +4,7 @@ import socket
 import pickle
 import sys
 import random
-from threading import Thread,Timer
+from threading import Thread,Lock
 import time
 from collections import defaultdict
 
@@ -12,18 +12,27 @@ from collections import defaultdict
 #https://gist.github.com/econchick/4666413
 class Graph:
   def __init__(self):
+    self.lock = Lock()
     self.nodes = set()
     self.edges = defaultdict(list)
     self.distances = {}
     
   def add_node(self, value):
-    self.nodes.add(value)
+    self.lock.acquire()
+    try:
+      self.nodes.add(value)
+    finally:
+      self.lock.release()
     
   def add_edge(self, from_node, to_node, distance):
-    self.edges[from_node].append(to_node)
-    self.edges[to_node].append(from_node)
-    self.distances[(from_node, to_node)] = distance
-    self.distances[(to_node, from_node)] = distance
+    self.lock.acquire()
+    try:
+      self.edges[from_node].append(to_node)
+      self.edges[to_node].append(from_node)
+      self.distances[(from_node, to_node)] = distance
+      self.distances[(to_node, from_node)] = distance
+    finally:
+      self.lock.release()
 
   
 def dijkstra(graph, initial):
@@ -58,8 +67,8 @@ def dijkstra(graph, initial):
 
 def broadcast(s, self, neighbours_cost, neighbours_port):
   while True:
-    # seq = random.randint(0,10000)
-    seq = 200
+    seq = random.randint(0,10000)
+    # seq = 200
     for i, v in enumerate(neighbours_port):
         value = {'from':self,'neighbours':neighbours_cost,'seq':seq}
         packet = pickle.dumps(value)
@@ -85,7 +94,6 @@ def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
     if source != self and rereceived == False:
       print message
       received_lsp.add(message['seq'])
-      print received_lsp
       for i, v in enumerate(broadcasted_neighbour):
         graph.add_node(v)
         graph.add_edge(message['from'],v,broadcasted_neighbour[v])
@@ -98,9 +106,9 @@ def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
 
 def countShortest(self,graph,received_lsp):
   while True:
-    dijkstra(graph, self)
-    received_lsp = set()#clears the previous 30 seconds worth of seq nums
     time.sleep(30)
+    print dijkstra(graph, self)
+    received_lsp = set()#clears the previous 30 seconds worth of seq nums
 
 #--------------------------------main is here----------------------------------
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -130,17 +138,17 @@ for i in range (0,num_of_neighbour):
   graph.add_node(read[0])
   graph.add_edge(self, read[0], float(read[1]))
 
-print graph.edges
-print graph.distances
-
 try:
   #broadcast thread
+  print 'starting broadcast thread'
   t1 = Thread(target=broadcast, kwargs={'s':s,'self':self,'neighbours_cost':neighbours_cost,'neighbours_port':neighbours_port})
   t1.daemon = True
   #rebroadcast thread
+  print 'starting rebroadcast thread'
   t2 = Thread(target=rebroadcast, kwargs={'s':s,'self':self,'graph':graph,'port':port,'neighbours_port':neighbours_port,'received_lsp':received_lsp})
   t2.daemon = True
   #dijkstra thread
+  print 'starting dijkstra thread'
   t3 = Thread(target=countShortest, kwargs={'self':self,'graph':graph, 'received_lsp':received_lsp})
   t3.daemon = True
   threads.append(t1)
