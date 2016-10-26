@@ -82,7 +82,7 @@ def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
   #gotta checks for incoming packet, and will rebroadcast while also adding more to the topology
   while True:
     rereceived = False
-    print 'waiting for lsp'
+    # print 'waiting for lsp'
     packet, client = s.recvfrom(1024) #lsp doesn't go over 300
     message = pickle.loads(packet)
     broadcasted_neighbour = message['neighbours']
