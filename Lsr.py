@@ -58,26 +58,34 @@ def dijkstra(graph, initial):
 
 def broadcast(s, self, neighbours_cost, neighbours_port):
   while True:
-    seq = random.randint(0,10000)
+    # seq = random.randint(0,10000)
+    seq = 200
     for i, v in enumerate(neighbours_port):
         value = {'from':self,'neighbours':neighbours_cost,'seq':seq}
         packet = pickle.dumps(value)
         s.sendto(packet, ('127.0.0.1',neighbours_port[v]))#v is its neighbours
         # print value['neighbours'][v]
-        print 'sent to %d' %(neighbours_port[v])
+        # print 'sent to %d' %(neighbours_port[v])
     time.sleep(1)
 
 
-def rebroadcast(s, self, graph, port, neighbours_port):
+def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
   #gotta checks for incoming packet, and will rebroadcast while also adding more to the topology
   while True:
+    rereceived = False
     print 'waiting for lsp'
     packet, client = s.recvfrom(1024) #lsp doesn't go over 300
     message = pickle.loads(packet)
     broadcasted_neighbour = message['neighbours']
     source = message['from']
-    if source != self:
+    
+    if message['seq'] in received_lsp:
+      rereceived = True
+    
+    if source != self and rereceived == False:
       print message
+      received_lsp.add(message['seq'])
+      print received_lsp
       for i, v in enumerate(broadcasted_neighbour):
         graph.add_node(v)
         graph.add_edge(message['from'],v,broadcasted_neighbour[v])
@@ -85,12 +93,13 @@ def rebroadcast(s, self, graph, port, neighbours_port):
       for i, v in enumerate(neighbours_port):
         if v != source:
           s.sendto(packet, ('127.0.0.1',neighbours_port[v]))
-          print 'rebroadcasted packet from %s' %(source)
+          # print 'rebroadcasted packet from %s' %(source)
 
 
-def countShortest(self,graph):
+def countShortest(self,graph,received_lsp):
   while True:
     dijkstra(graph, self)
+    received_lsp = set()#clears the previous 30 seconds worth of seq nums
     time.sleep(30)
 
 #--------------------------------main is here----------------------------------
@@ -101,6 +110,7 @@ port = int(sys.argv[2])
 f = open(sys.argv[3],'r')
 neighbours_cost = {}
 neighbours_port = {}
+received_lsp = set()
 threads = []
 num_of_neighbour = f.readline()
 num_of_neighbour = int(num_of_neighbour)
@@ -128,10 +138,10 @@ try:
   t1 = Thread(target=broadcast, kwargs={'s':s,'self':self,'neighbours_cost':neighbours_cost,'neighbours_port':neighbours_port})
   t1.daemon = True
   #rebroadcast thread
-  t2 = Thread(target=rebroadcast, kwargs={'s':s,'self':self,'graph':graph,'port':port,'neighbours_port':neighbours_port})
+  t2 = Thread(target=rebroadcast, kwargs={'s':s,'self':self,'graph':graph,'port':port,'neighbours_port':neighbours_port,'received_lsp':received_lsp})
   t2.daemon = True
   #dijkstra thread
-  t3 = Thread(target=countShortest, kwargs={'self':self,'graph':graph})
+  t3 = Thread(target=countShortest, kwargs={'self':self,'graph':graph, 'received_lsp':received_lsp})
   t3.daemon = True
   threads.append(t1)
   threads.append(t2)
