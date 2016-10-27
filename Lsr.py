@@ -64,7 +64,9 @@ def dijkstra(graph, initial):
         
   return visited, path
   
-  
+#shortestPath implementation by David Eppstein
+#UC Irvine, 4 April 2002
+#code.activestate.com/recipes/119466-dijkstras-algorithm-for-shortest-paths/
 def shortestPath(self,P,target):
   path = []
   while True:
