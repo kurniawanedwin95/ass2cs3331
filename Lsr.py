@@ -40,7 +40,7 @@ def dijkstra(graph, initial):
   path = {}
   
   nodes = set(graph.nodes)
-  
+
   while nodes:
     min_node = None
     for node in nodes:
@@ -55,7 +55,7 @@ def dijkstra(graph, initial):
     
     nodes.remove(min_node)
     current_weight = visited[min_node]
-    
+
     for edge in graph.edges[min_node]:
       weight = current_weight + graph.distances[(min_node, edge)]
       if edge not in visited or weight < visited[edge]:
@@ -63,6 +63,18 @@ def dijkstra(graph, initial):
         path[edge] = min_node
         
   return visited, path
+  
+  
+def shortestPath(self,P,target):
+  path = []
+  while True:
+    path.append(target)
+    if target == self:
+      break
+    target = P[target]
+  
+  path.reverse()
+  return path
 
 
 def broadcast(s, self, neighbours_cost, neighbours_port):
@@ -88,11 +100,13 @@ def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
     broadcasted_neighbour = message['neighbours']
     source = message['from']
     
+    #checks whether this is a message previously received or not
     if message['seq'] in received_lsp:
       rereceived = True
     
+    #checks if lsp is from source
     if source != self and rereceived == False:
-      print message
+      # print message
       received_lsp.add(message['seq'])
       for i, v in enumerate(broadcasted_neighbour):
         graph.add_node(v)
@@ -107,7 +121,15 @@ def rebroadcast(s, self, graph, port, neighbours_port, received_lsp):
 def countShortest(self,graph,received_lsp):
   while True:
     time.sleep(30)
-    print dijkstra(graph, self)
+    visited, path = dijkstra(graph, self)
+    for node in graph.nodes:
+      string = ''
+      route = shortestPath(self, path, node)
+      for track in route:
+        string = string+track
+      if string != node:
+        print 'least-cost path to node %s: %s and the cost is %.1f' %(node,string,round(visited[node],1))
+    print ''
     received_lsp = set()#clears the previous 30 seconds worth of seq nums
 
 #--------------------------------main is here----------------------------------
