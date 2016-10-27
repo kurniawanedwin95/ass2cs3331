@@ -8,7 +8,7 @@ from threading import Thread,Lock
 import time
 from collections import defaultdict
 
-#graph implementation by Lynn Root
+#graph and dijkstra implementation by Lynn Root
 #https://gist.github.com/econchick/4666413
 class Graph:
   def __init__(self):
